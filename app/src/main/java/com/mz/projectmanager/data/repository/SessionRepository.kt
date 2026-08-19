@@ -12,7 +12,7 @@ class SessionRepository(private val dbPath: String) {
 
     private var db: SQLiteDatabase? = null
 
-    private val localDbPath = "/data/local/tmp/opencode_pm.db"
+    private val localDbPath = "/root/opencode_pm.db"
 
     private fun getDb(): SQLiteDatabase {
         if (db == null || !db!!.isOpen) {
