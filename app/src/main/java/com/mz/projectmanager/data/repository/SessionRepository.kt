@@ -1,20 +1,33 @@
 package com.mz.projectmanager.data.repository
 
 import android.content.ContentValues
+import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.mz.projectmanager.data.model.ProjectItem
 import com.mz.projectmanager.data.model.SessionItem
 import com.mz.projectmanager.util.IdGenerator
+import com.mz.projectmanager.util.RootCommand
+import kotlinx.coroutines.runBlocking
+import java.io.File
 
-class SessionRepository(private val dbPath: String) {
+class SessionRepository(context: Context, private val dbPath: String) {
 
     private var db: SQLiteDatabase? = null
+    private val localDb = File(context.cacheDir, "opencode.db")
 
     private fun getDb(): SQLiteDatabase {
         if (db == null || !db!!.isOpen) {
-            db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READWRITE)
+            runBlocking { RootCommand.execute("cp '$dbPath' '${localDb.absolutePath}'") }
+            if (!localDb.exists() || localDb.length() == 0L) {
+                throw Exception("无法复制数据库，请确认 su 权限正常且 opencode 已运行过")
+            }
+            db = SQLiteDatabase.openDatabase(localDb.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
         }
         return db!!
+    }
+
+    private fun syncBack() {
+        runBlocking { RootCommand.execute("cp '${localDb.absolutePath}' '$dbPath'") }
     }
 
     fun getAllProjects(): List<ProjectItem> {
@@ -141,6 +154,7 @@ class SessionRepository(private val dbPath: String) {
             put("sandboxes", "[]")
         }
         db.insert("project", null, values)
+        syncBack()
 
         return ProjectItem(
             id = projectId,
@@ -158,12 +172,16 @@ class SessionRepository(private val dbPath: String) {
         if (worktree != null) values.put("worktree", worktree)
         values.put("time_updated", System.currentTimeMillis())
 
-        return db.update("project", values, "id = ?", arrayOf(projectId)) > 0
+        val result = db.update("project", values, "id = ?", arrayOf(projectId)) > 0
+        if (result) syncBack()
+        return result
     }
 
     fun deleteProject(projectId: String): Boolean {
         val db = getDb()
-        return db.delete("project", "id = ?", arrayOf(projectId)) > 0
+        val result = db.delete("project", "id = ?", arrayOf(projectId)) > 0
+        if (result) syncBack()
+        return result
     }
 
     fun createSession(projectId: String, directory: String, title: String): SessionItem {
@@ -184,6 +202,7 @@ class SessionRepository(private val dbPath: String) {
             put("model", "big-pickle")
         }
         db.insert("session", null, values)
+        syncBack()
 
         return SessionItem(
             id = sessionId,
@@ -202,15 +221,20 @@ class SessionRepository(private val dbPath: String) {
             put("directory", newDirectory)
             put("time_updated", System.currentTimeMillis())
         }
-        return db.update("session", values, "id = ?", arrayOf(sessionId)) > 0
+        val ok = db.update("session", values, "id = ?", arrayOf(sessionId)) > 0
+        if (ok) syncBack()
+        return ok
     }
 
     fun deleteSession(sessionId: String): Boolean {
         val db = getDb()
-        return db.delete("session", "id = ?", arrayOf(sessionId)) > 0
+        val ok = db.delete("session", "id = ?", arrayOf(sessionId)) > 0
+        if (ok) syncBack()
+        return ok
     }
 
     fun close() {
+        syncBack()
         db?.close()
         db = null
     }
