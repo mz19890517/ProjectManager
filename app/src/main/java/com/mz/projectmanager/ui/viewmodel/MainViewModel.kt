@@ -1,6 +1,7 @@
 package com.mz.projectmanager.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mz.projectmanager.data.model.FileItem
@@ -9,6 +10,7 @@ import com.mz.projectmanager.data.model.SessionItem
 import com.mz.projectmanager.data.model.SortOption
 import com.mz.projectmanager.data.repository.FileRepository
 import com.mz.projectmanager.data.repository.SessionRepository
+import com.mz.projectmanager.util.SettingsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +20,27 @@ import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val sessionRepo = SessionRepository(FileRepository.OPENCODE_DB_PATH)
-    private val fileRepo = FileRepository()
+    private val settingsManager = SettingsManager(application)
+
+    private var _sessionRepo: SessionRepository? = null
+    private var _fileRepo: FileRepository? = null
+
+    private val sessionRepo: SessionRepository
+        get() {
+            if (_sessionRepo == null) {
+                val cacheDir = getApplication<Application>().cacheDir.absolutePath
+                _sessionRepo = SessionRepository(settingsManager.dbPath, cacheDir)
+            }
+            return _sessionRepo!!
+        }
+
+    private val fileRepo: FileRepository
+        get() {
+            if (_fileRepo == null) {
+                _fileRepo = FileRepository(settingsManager.projectsRoot)
+            }
+            return _fileRepo!!
+        }
 
     private val _projects = MutableStateFlow<List<ProjectItem>>(emptyList())
     val projects: StateFlow<List<ProjectItem>> = _projects.asStateFlow()
@@ -47,6 +68,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _clipboardMode = MutableStateFlow<ClipboardMode?>(null)
     val clipboardMode: StateFlow<ClipboardMode?> = _clipboardMode.asStateFlow()
+
+    private val _isConfigured = MutableStateFlow(settingsManager.isConfigured)
+    val isConfigured: StateFlow<Boolean> = _isConfigured.asStateFlow()
+
+    val settings: SettingsManager get() = settingsManager
+
+    fun setProjectsRoot(path: String) {
+        settingsManager.projectsRoot = path
+        _fileRepo = null
+        _isConfigured.value = true
+    }
+
+    fun setDbPath(path: String) {
+        settingsManager.dbPath = path
+        _sessionRepo = null
+    }
 
     fun loadProjects() {
         viewModelScope.launch {
@@ -116,9 +153,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val fullPath = "${FileRepository.PROJECTS_ROOT}/$name"
+                val fullPath = "${settingsManager.projectsRoot}/$name"
                 withContext(Dispatchers.IO) {
-                    fileRepo.createDirectory(FileRepository.PROJECTS_ROOT, name)
+                    fileRepo.createDirectory(settingsManager.projectsRoot, name)
                     sessionRepo.createProject(fullPath, name)
                 }
                 loadProjects()

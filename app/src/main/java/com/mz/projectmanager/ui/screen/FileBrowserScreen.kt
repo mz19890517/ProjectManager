@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentCut
@@ -27,6 +28,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -60,6 +62,8 @@ import com.mz.projectmanager.ui.viewmodel.MainViewModel
 fun FileBrowserScreen(
     initialPath: String,
     onNavigateBack: () -> Unit,
+    selectionMode: String? = null,
+    onFolderSelected: ((String) -> Unit)? = null,
     viewModel: MainViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val context = LocalContext.current
@@ -75,6 +79,8 @@ fun FileBrowserScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedFile by remember { mutableStateOf<com.mz.projectmanager.data.model.FileItem?>(null) }
 
+    val isSelectMode = selectionMode != null
+
     LaunchedEffect(currentPath) {
         viewModel.loadFiles(currentPath)
     }
@@ -86,10 +92,16 @@ fun FileBrowserScreen(
         }
     }
 
+    val title = when (selectionMode) {
+        "projects" -> "选择项目目录"
+        "db" -> "选择数据库文件"
+        else -> "文件浏览"
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("文件浏览") },
+                title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "返回")
@@ -102,11 +114,20 @@ fun FileBrowserScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { showCreateDialog = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("新建") }
-            )
+            if (isSelectMode) {
+                FloatingActionButton(
+                    onClick = { onFolderSelected?.invoke(currentPath) },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = "选择此目录")
+                }
+            } else {
+                ExtendedFloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("新建") }
+                )
+            }
         }
     ) { paddingValues ->
         Column(
@@ -126,6 +147,39 @@ fun FileBrowserScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (isSelectMode) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    tonalElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.tertiary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "当前: $currentPath",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = {
+                            onFolderSelected?.invoke(currentPath)
+                        }) {
+                            Text("选择此处")
+                        }
+                    }
+                }
+            }
 
             if (clipboardItems.isNotEmpty()) {
                 Surface(
@@ -223,9 +277,7 @@ fun FileBrowserScreen(
             }
             DropdownMenuItem(
                 text = { Text("重命名") },
-                onClick = {
-                    showRenameDialog = true
-                },
+                onClick = { showRenameDialog = true },
                 leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) }
             )
             DropdownMenuItem(
@@ -246,9 +298,7 @@ fun FileBrowserScreen(
             )
             DropdownMenuItem(
                 text = { Text("删除") },
-                onClick = {
-                    showDeleteDialog = true
-                },
+                onClick = { showDeleteDialog = true },
                 leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null) }
             )
         }

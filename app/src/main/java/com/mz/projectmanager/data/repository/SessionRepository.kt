@@ -7,16 +7,23 @@ import com.mz.projectmanager.data.model.SessionItem
 import com.mz.projectmanager.util.IdGenerator
 import com.mz.projectmanager.util.RootCommand
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
-class SessionRepository(private val dbPath: String) {
+class SessionRepository(private val dbPath: String, private val cacheDir: String) {
 
     private var db: SQLiteDatabase? = null
 
-    private val localDbPath = "/root/opencode_pm.db"
+    private val localDbPath: String
+        get() = "$cacheDir/opencode_pm.db"
 
     private fun getDb(): SQLiteDatabase {
         if (db == null || !db!!.isOpen) {
-            val r = runBlocking { RootCommand.execute("cp '$dbPath' '$localDbPath' && chmod 666 '$localDbPath'") }
+            val cacheFile = File(cacheDir)
+            if (!cacheFile.exists()) cacheFile.mkdirs()
+
+            val r = runBlocking {
+                RootCommand.execute("cp '$dbPath' '$localDbPath' && chmod 666 '$localDbPath'")
+            }
             if (r.isFailure) {
                 throw Exception("复制数据库失败: ${r.exceptionOrNull()?.message}")
             }
@@ -26,7 +33,9 @@ class SessionRepository(private val dbPath: String) {
     }
 
     private fun syncBack() {
-        runBlocking { RootCommand.execute("cp '$localDbPath' '$dbPath'") }
+        runBlocking {
+            RootCommand.execute("cp '$localDbPath' '$dbPath'")
+        }
     }
 
     fun getAllProjects(): List<ProjectItem> {

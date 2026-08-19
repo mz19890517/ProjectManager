@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,15 +22,17 @@ import com.mz.projectmanager.ui.viewmodel.MainViewModel
 @Composable
 fun ProjectListScreen(
     onProjectClick: (String) -> Unit,
+    onSelectFolder: (String, String) -> Unit,
     viewModel: MainViewModel = viewModel()
 ) {
     val projects by viewModel.projects.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val isConfigured by viewModel.isConfigured.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var showCreateDialog by remember { mutableStateOf(false) }
-    var isRefreshing by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
 
     val filteredProjects = remember(projects, searchQuery) {
         if (searchQuery.isBlank()) projects
@@ -39,8 +42,10 @@ fun ProjectListScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.loadProjects()
+    LaunchedEffect(isConfigured) {
+        if (isConfigured) {
+            viewModel.loadProjects()
+        }
     }
 
     Scaffold(
@@ -50,80 +55,114 @@ fun ProjectListScreen(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { showSettingsDialog = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "设置")
+                    }
+                }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "创建项目")
+            if (isConfigured) {
+                FloatingActionButton(
+                    onClick = { showCreateDialog = true }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "创建项目")
+                }
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+        if (!isConfigured) {
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("搜索项目...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true
-            )
-
-            if (errorMessage != null) {
-                Snackbar(
-                    modifier = Modifier.padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.clearError() }) {
-                            Text("关闭")
-                        }
-                    }
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text(errorMessage ?: "")
+                    Text(
+                        text = "欢迎使用项目管理器",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text(
+                        text = "请先设置项目目录和数据库路径",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Button(onClick = { showSettingsDialog = true }) {
+                        Text("去设置")
+                    }
                 }
             }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    placeholder = { Text("搜索项目...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    singleLine = true
+                )
 
-            when {
-                isLoading && projects.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                if (errorMessage != null) {
+                    Snackbar(
+                        modifier = Modifier.padding(16.dp),
+                        action = {
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text("关闭")
+                            }
+                        }
                     ) {
-                        CircularProgressIndicator()
+                        Text(errorMessage ?: "")
                     }
                 }
-                filteredProjects.isEmpty() -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = if (searchQuery.isBlank()) "暂无项目\n点击 + 创建新项目" else "未找到匹配项目",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center
-                        )
+
+                when {
+                    isLoading && projects.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                else -> {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(filteredProjects, key = { it.id }) { project ->
-                            ProjectCard(
-                                project = project,
-                                onClick = { onProjectClick(project.id) },
-                                modifier = Modifier.fillMaxWidth()
+                    filteredProjects.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (searchQuery.isBlank()) "暂无项目\n点击 + 创建新项目" else "未找到匹配项目",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                textAlign = TextAlign.Center
                             )
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(filteredProjects, key = { it.id }) { project ->
+                                ProjectCard(
+                                    project = project,
+                                    onClick = { onProjectClick(project.id) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     }
                 }
@@ -140,4 +179,76 @@ fun ProjectListScreen(
             }
         )
     }
+
+    if (showSettingsDialog) {
+        SettingsDialog(
+            currentProjectsRoot = viewModel.settings.projectsRoot,
+            currentDbPath = viewModel.settings.dbPath,
+            onSelectProjectsRoot = { path ->
+                viewModel.setProjectsRoot(path)
+                showSettingsDialog = false
+                onSelectFolder(path, "projects")
+            },
+            onSelectDbPath = { path ->
+                viewModel.setDbPath(path)
+                showSettingsDialog = false
+                onSelectFolder(path.substringBeforeLast('/'), "db")
+            },
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SettingsDialog(
+    currentProjectsRoot: String,
+    currentDbPath: String,
+    onSelectProjectsRoot: (String) -> Unit,
+    onSelectDbPath: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("设置") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column {
+                    Text(
+                        text = "项目目录",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = currentProjectsRoot,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(onClick = { onSelectProjectsRoot(currentProjectsRoot) }) {
+                        Text("浏览选择")
+                    }
+                }
+                HorizontalDivider()
+                Column {
+                    Text(
+                        text = "数据库路径",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Text(
+                        text = currentDbPath,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(onClick = { onSelectDbPath(currentDbPath) }) {
+                        Text("浏览选择")
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
 }

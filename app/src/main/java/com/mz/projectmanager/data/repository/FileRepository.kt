@@ -6,12 +6,7 @@ import com.mz.projectmanager.util.RootCommand
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class FileRepository {
-
-    companion object {
-        const val PROJECTS_ROOT = "/root/projects"
-        const val OPENCODE_DB_PATH = "/root/.local/share/opencode/opencode.db"
-    }
+class FileRepository(private val projectsRoot: String) {
 
     suspend fun listFiles(path: String, sortOption: SortOption = SortOption.NAME_ASC): Result<List<FileItem>> {
         val result = RootCommand.listFiles(path)
