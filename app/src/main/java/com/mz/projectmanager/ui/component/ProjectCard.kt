@@ -7,12 +7,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.mz.projectmanager.data.model.Project
+import com.mz.projectmanager.data.model.ProjectItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectCard(
-    project: Project,
+    project: ProjectItem,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -36,7 +36,7 @@ fun ProjectCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = project.path,
+                text = project.worktree,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 maxLines = 1,

@@ -8,11 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.mz.projectmanager.data.model.Project
+import com.mz.projectmanager.data.model.ProjectItem
 
 @Composable
 fun BindSessionDialog(
-    projects: List<Project>,
+    projects: List<ProjectItem>,
     currentProjectId: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (projectId: String) -> Unit
@@ -31,7 +31,7 @@ fun BindSessionDialog(
                         headlineContent = { Text(project.name) },
                         supportingContent = {
                             Text(
-                                project.path,
+                                project.worktree,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )

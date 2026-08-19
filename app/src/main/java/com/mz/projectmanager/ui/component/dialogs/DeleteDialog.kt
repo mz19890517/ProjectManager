@@ -1,6 +1,7 @@
 package com.mz.projectmanager.ui.component.dialogs
 
 import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
 
 @Composable
 fun DeleteDialog(

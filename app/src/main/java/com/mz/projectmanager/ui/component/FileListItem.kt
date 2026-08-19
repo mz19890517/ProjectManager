@@ -41,9 +41,9 @@ fun FileListItem(
         },
         leadingContent = {
             Icon(
-                imageVector = if (fileItem.isFolder) Icons.Default.Folder else Icons.Default.Description,
-                contentDescription = if (fileItem.isFolder) "文件夹" else "文件",
-                tint = if (fileItem.isFolder) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                imageVector = if (fileItem.isDirectory) Icons.Default.Folder else Icons.Default.Description,
+                contentDescription = if (fileItem.isDirectory) "文件夹" else "文件",
+                tint = if (fileItem.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         modifier = modifier.combinedClickable(

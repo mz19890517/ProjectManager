@@ -119,9 +119,10 @@ fun FileBrowserScreen(
             }
 
             PathBar(
-                path = currentPath,
-                onPathClick = { path ->
-                    currentPath = path
+                segments = currentPath.split("/").filter { it.isNotEmpty() },
+                onSegmentClick = { index ->
+                    val parts = currentPath.split("/").filter { it.isNotEmpty() }
+                    currentPath = "/" + parts.take(index + 1).joinToString("/")
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -189,7 +190,7 @@ fun FileBrowserScreen(
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     items(files) { file ->
                         FileListItem(
-                            file = file,
+                            fileItem = file,
                             onClick = {
                                 if (file.isDirectory) {
                                     currentPath = file.path
@@ -255,8 +256,6 @@ fun FileBrowserScreen(
 
     if (showCreateDialog) {
         CreateProjectDialog(
-            title = "新建",
-            confirmText = "创建",
             onConfirm = { name ->
                 viewModel.createFile(currentPath, name)
                 showCreateDialog = false
