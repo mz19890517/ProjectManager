@@ -2,23 +2,19 @@ package com.mz.projectmanager.data.repository
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
-import android.database.sqlite.SQLiteOpenHelper
 import com.mz.projectmanager.data.model.ProjectItem
 import com.mz.projectmanager.data.model.SessionItem
 import com.mz.projectmanager.util.IdGenerator
 
 class SessionRepository(private val dbPath: String) {
 
-    private var dbHelper: SQLiteOpenHelper? = null
+    private var db: SQLiteDatabase? = null
 
     private fun getDb(): SQLiteDatabase {
-        if (dbHelper == null) {
-            dbHelper = object : SQLiteOpenHelper(null, dbPath, null, 1) {
-                override fun onCreate(db: SQLiteDatabase) {}
-                override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
-            }
+        if (db == null || !db!!.isOpen) {
+            db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READWRITE)
         }
-        return dbHelper!!.readableDatabase
+        return db!!
     }
 
     fun getAllProjects(): List<ProjectItem> {
@@ -215,7 +211,7 @@ class SessionRepository(private val dbPath: String) {
     }
 
     fun close() {
-        dbHelper?.close()
-        dbHelper = null
+        db?.close()
+        db = null
     }
 }
