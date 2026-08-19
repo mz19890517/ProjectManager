@@ -1,33 +1,32 @@
 package com.mz.projectmanager.data.repository
 
 import android.content.ContentValues
-import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import com.mz.projectmanager.data.model.ProjectItem
 import com.mz.projectmanager.data.model.SessionItem
 import com.mz.projectmanager.util.IdGenerator
 import com.mz.projectmanager.util.RootCommand
 import kotlinx.coroutines.runBlocking
-import java.io.File
 
-class SessionRepository(context: Context, private val dbPath: String) {
+class SessionRepository(private val dbPath: String) {
 
     private var db: SQLiteDatabase? = null
-    private val localDb = File(context.cacheDir, "opencode.db")
+
+    private val localDbPath = "/data/local/tmp/opencode_pm.db"
 
     private fun getDb(): SQLiteDatabase {
         if (db == null || !db!!.isOpen) {
-            runBlocking { RootCommand.execute("cp '$dbPath' '${localDb.absolutePath}'") }
-            if (!localDb.exists() || localDb.length() == 0L) {
-                throw Exception("无法复制数据库，请确认 su 权限正常且 opencode 已运行过")
+            val r = runBlocking { RootCommand.execute("cp '$dbPath' '$localDbPath' && chmod 666 '$localDbPath'") }
+            if (r.isFailure) {
+                throw Exception("复制数据库失败: ${r.exceptionOrNull()?.message}")
             }
-            db = SQLiteDatabase.openDatabase(localDb.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
+            db = SQLiteDatabase.openDatabase(localDbPath, null, SQLiteDatabase.OPEN_READWRITE)
         }
         return db!!
     }
 
     private fun syncBack() {
-        runBlocking { RootCommand.execute("cp '${localDb.absolutePath}' '$dbPath'") }
+        runBlocking { RootCommand.execute("cp '$localDbPath' '$dbPath'") }
     }
 
     fun getAllProjects(): List<ProjectItem> {

@@ -18,7 +18,7 @@ import kotlinx.coroutines.withContext
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val sessionRepo = SessionRepository(application, FileRepository.OPENCODE_DB_PATH)
+    private val sessionRepo = SessionRepository(FileRepository.OPENCODE_DB_PATH)
     private val fileRepo = FileRepository()
 
     private val _projects = MutableStateFlow<List<ProjectItem>>(emptyList())
