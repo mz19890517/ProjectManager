@@ -32,7 +32,7 @@ fun ProjectListScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var showCreateDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
+    var showSetDb by remember { mutableStateOf(false) }
 
     val filteredProjects = remember(projects, searchQuery) {
         if (searchQuery.isBlank()) projects
@@ -57,8 +57,10 @@ fun ProjectListScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    IconButton(onClick = { showSettingsDialog = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "设置")
+                    if (isConfigured) {
+                        IconButton(onClick = { onSelectFolder("/", "projects") }) {
+                            Icon(Icons.Default.Settings, contentDescription = "设置")
+                        }
                     }
                 }
             )
@@ -82,7 +84,8 @@ fun ProjectListScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(32.dp)
                 ) {
                     Text(
                         text = "欢迎使用项目管理器",
@@ -93,8 +96,11 @@ fun ProjectListScreen(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Button(onClick = { showSettingsDialog = true }) {
-                        Text("去设置")
+                    Button(onClick = { onSelectFolder("/", "projects") }) {
+                        Text("选择项目目录")
+                    }
+                    OutlinedButton(onClick = { onSelectFolder("/", "db") }) {
+                        Text("选择数据库路径")
                     }
                 }
             }
@@ -179,76 +185,4 @@ fun ProjectListScreen(
             }
         )
     }
-
-    if (showSettingsDialog) {
-        SettingsDialog(
-            currentProjectsRoot = viewModel.settings.projectsRoot,
-            currentDbPath = viewModel.settings.dbPath,
-            onSelectProjectsRoot = { path ->
-                viewModel.setProjectsRoot(path)
-                showSettingsDialog = false
-                onSelectFolder(path, "projects")
-            },
-            onSelectDbPath = { path ->
-                viewModel.setDbPath(path)
-                showSettingsDialog = false
-                onSelectFolder(path.substringBeforeLast('/'), "db")
-            },
-            onDismiss = { showSettingsDialog = false }
-        )
-    }
-}
-
-@Composable
-fun SettingsDialog(
-    currentProjectsRoot: String,
-    currentDbPath: String,
-    onSelectProjectsRoot: (String) -> Unit,
-    onSelectDbPath: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("设置") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column {
-                    Text(
-                        text = "项目目录",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Text(
-                        text = currentProjectsRoot,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(onClick = { onSelectProjectsRoot(currentProjectsRoot) }) {
-                        Text("浏览选择")
-                    }
-                }
-                HorizontalDivider()
-                Column {
-                    Text(
-                        text = "数据库路径",
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Text(
-                        text = currentDbPath,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedButton(onClick = { onSelectDbPath(currentDbPath) }) {
-                        Text("浏览选择")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("关闭")
-            }
-        }
-    )
 }
